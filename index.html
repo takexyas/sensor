@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <meta charset="UTF-8" />
+    <title>SENSOR GRAPH</title>
+  </head>
+  <body>
+    <div>
+      <label>
+	<input id="x" type="checkbox" name="x"
+	       onclick="field.turnX();" checked>X軸
+      </label>
+      <label>
+	<input id="y" type="checkbox" name="y"
+	       onclick="field.turnY();" checked>Y軸
+      </label>
+      <label>
+	<input id="z" type="checkbox" name="z"
+	       onclick="field.turnZ();" checked>Z軸
+      </label>
+      <label>
+	<input id="a" type="checkbox" name="a"
+	       onclick="field.turnA();">全体
+      </label>
+      <label>
+	<input id="base" type="checkbox" name="base"
+	       onclick="field.turnBase();" checked>基準線
+      </label>
+    </div>
+    <canvas id="graph"></canvas>
+<script>
+
+// キャンバスのコンテキスト
+var ctx = null;
+// フィールドオブジェクト
+var field = null;
+
+
+//========================================
+// フィールドオブジェクト
+//========================================
+function Field() {
+  // 幅・高さ
+  this.width;
+  this.height;
+  // タイマーID
+  this.cmTID;
+  // タイムステップ(ミリセカンド)
+  this.timeStep = 50;
+  // フレームレート(fps)
+  this.frameRate = 1000 / this.timeStep;
+  // 各軸の加速度
+  this.ax = [];
+  this.ay = [];
+  this.az = [];
+  this.a = [];
+  // ピッチ(pixcel)
+  this.pitchWidth = 4;
+  // 加速度の最大目盛
+  this.maxHeight = 50;
+  // 引き伸ばす倍率
+  this.widenHeight;
+  // グラフ表示
+  this.axisX = true;
+  this.axisY = true;
+  this.axisZ = true;
+  this.axisA = false;
+  this.axisBase = true;
+
+  //----------------------------------------
+  // 初期化
+  //----------------------------------------
+  this.init = function() {
+    // キャンバスの幅・高さ調整
+    this.width  = ctx.canvas.width  = window.innerWidth;
+    this.height = ctx.canvas.height = window.innerHeight;
+    // 引き伸ばす倍率
+    this.widenHeight = this.height / this.maxHeight;
+  };
+
+  //----------------------------------------
+  // 動き計算
+  //----------------------------------------
+  this.move = function() {
+    // 幅・高さが変更された場合
+    if (this.width != window.innerWidth
+	|| this.height != window.innerHeight) {
+      // キャンバスの幅・高さ調整
+      this.width  = ctx.canvas.width  = window.innerWidth;
+      this.height = ctx.canvas.height = window.innerHeight;
+      // 引き伸ばす倍率
+      this.widenHeight = this.height / this.maxHeight;
+    }
+  };
+
+  //----------------------------------------
+  // 描画
+  //----------------------------------------
+  this.draw = function() {
+    // 画面クリア
+    ctx.clearRect(0, 0, this.width, this.height);
+
+    // 基準線
+    if (this.axisBase) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgb(192, 192, 192)';
+      // 1/4ずつ横線を引く
+      for (var i = 1; i <= 3; i++) {
+	ctx.moveTo(0, this.height * i / 4);
+	ctx.lineTo(this.width, this.height * i / 4);
+      }
+      // 1秒ごとに縦線を引く
+      var lineSecond = this.width - this.frameRate * this.pitchWidth;
+      // 画面内である間
+      while (lineSecond > 0) {
+	ctx.moveTo(lineSecond, 0);
+	ctx.lineTo(lineSecond, this.height);
+	lineSecond -= this.frameRate * this.pitchWidth;
+      }
+      ctx.stroke();
+    }
+
+    // センター
+    var center = this.height / 2;
+    // 開始位置をずらす
+    var shift = 0;
+
+    // X軸
+    if (this.axisX) {
+      // 開始処理
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgb(255, 0, 0)';
+      // データが最大数まで埋まっていない場合
+      if (this.ax.length < this.width / this.pitchWidth) {
+	// 開始位置をずらす
+	shift = this.width - this.ax.length * this.pitchWidth;
+      }
+      ctx.moveTo(shift, center);
+      // 各値に対して
+      for (var i = 0; i < this.ax.length; i++) {
+	// 加速度
+	ctx.lineTo(shift + i * this.pitchWidth,
+		   center - this.ax[i] * this.widenHeight);
+      }
+      // 描画
+      ctx.stroke();
+    }
+
+    // Y軸
+    if (this.axisY) {
+      // 開始処理
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgb(0, 255, 0)';
+      // データが最大数まで埋まっていない場合
+      if (this.ay.length < this.width / this.pitchWidth) {
+	// 開始位置をずらす
+	shift = this.width - this.ay.length * this.pitchWidth;
+      }
+      ctx.moveTo(shift, center);
+      // 各値に対して
+      for (var i = 0; i < this.ay.length; i++) {
+	// 加速度
+	ctx.lineTo(shift + i * this.pitchWidth,
+		   center - this.ay[i] * this.widenHeight);
+      }
+      // 描画
+      ctx.stroke();
+    }
+
+    // Z軸
+    if (this.axisZ) {
+      // 開始処理
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgb(0, 0, 255)';
+      // データが最大数まで埋まっていない場合
+      if (this.az.length < this.width / this.pitchWidth) {
+	// 開始位置をずらす
+	shift = this.width - this.az.length * this.pitchWidth;
+      }
+      ctx.moveTo(shift, center);
+      // 各値に対して
+      for (var i = 0; i < this.az.length; i++) {
+	// 加速度
+	ctx.lineTo(shift + i * this.pitchWidth,
+		   center - this.az[i] * this.widenHeight);
+      }
+      // 描画
+      ctx.stroke();
+    }
+
+    // 全体
+    if (this.axisA) {
+      // 開始処理
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgb(0, 0, 0)';
+      // データが最大数まで埋まっていない場合
+      if (this.a.length < this.width / this.pitchWidth) {
+	// 開始位置をずらす
+	shift = this.width - this.a.length * this.pitchWidth;
+      }
+      ctx.moveTo(shift, center);
+      // 各値に対して
+      for (var i = 0; i < this.a.length; i++) {
+	// 加速度
+	ctx.lineTo(shift + i * this.pitchWidth,
+		   center - this.a[i] * this.widenHeight);
+      }
+      // 描画
+      ctx.stroke();
+    }
+  };
+
+  //----------------------------------------
+  // 全て更新
+  //----------------------------------------
+  this.updateAll = function() {
+    // setTimeoutで呼び出されるためthisではないことに注意
+
+    // 動き計算
+    field.move();
+    // 描画
+    field.draw();
+
+    // タイマークリア
+    clearTimeout(field.cmTID);
+    // ループ
+    field.cmTID = setTimeout(field.updateAll, field.timeStep);
+  };
+
+  //----------------------------------------
+  // グラフ表示・非表示
+  //----------------------------------------
+  this.turnX = function() {
+    // X軸
+    this.axisX = document.getElementById('x').checked;
+    // 戻り値
+    return false;
+  };
+  this.turnY = function() {
+    // Y軸
+    this.axisY = document.getElementById('y').checked;
+    // 戻り値
+    return false;
+  };
+  this.turnZ = function() {
+    // Z軸
+    this.axisZ = document.getElementById('z').checked;
+    // 戻り値
+    return false;
+  };
+  this.turnA = function() {
+    // 全体
+    this.axisA = document.getElementById('a').checked;
+    // 戻り値
+    return false;
+  };
+  this.turnBase = function() {
+    // 基準線
+    this.axisBase = document.getElementById('base').checked;
+    // 戻り値
+    return false;
+  };
+}
+
+
+//========================================
+// イベント
+//========================================
+//----------------------------------------
+// 加速度のコールバック関数
+// 引数: イベント
+//----------------------------------------
+function motionFunc(evt) {
+  var x;	// X軸・左右
+  var y;	// Y軸・上下
+  var z;	// Z軸・前後
+  var accel;	// 全体
+  // 精度
+  var accuracy = 1000;
+
+  // 加速度の各軸の値
+  x = Math.round(evt.acceleration.x * accuracy) / accuracy;
+  y = Math.round(evt.acceleration.y * accuracy) / accuracy;
+  z = Math.round(evt.acceleration.z * accuracy) / accuracy;
+  accel = Math.sqrt(x * x + y * y + z * z);
+  // 保存
+  field.ax.push(x);
+  field.ay.push(y);
+  field.az.push(z);
+  field.a.push(accel);
+
+  // 保存数を越えている場合
+  while (field.width / field.pitchWidth < field.ax.length) {
+    // 古いものから削除
+    field.ax.shift();
+    field.ay.shift();
+    field.az.shift();
+    field.a.shift();
+  }
+}
+
+
+//========================================
+// メイン
+//========================================
+function main() {
+  // キャンバスのコンテキスト
+  ctx = document.getElementById('graph').getContext('2d');
+
+  // オブジェクト生成
+  field = new Field();
+  // 初期化
+  field.init();
+
+  // イベント登録
+  // 加速度センサ
+  window.addEventListener('devicemotion', motionFunc, false);
+
+  // 実行
+  field.updateAll();
+}
+
+//========================================
+// ページがロードされたときに実行
+//========================================
+window.addEventListener('load', main, false);
+
+</script>
+</body>
+</html>
