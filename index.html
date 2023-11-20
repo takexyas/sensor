@@ -280,9 +280,9 @@ function motionFunc(evt) {
   var accuracy = 1000;
 
   // 加速度の各軸の値
-  x = Math.round(evt.acceleration.x * accuracy) / accuracy;
-  y = Math.round(evt.acceleration.y * accuracy) / accuracy;
-  z = Math.round(evt.acceleration.z * accuracy) / accuracy;
+  x = Math.round(evt.accelerationIncludingGravity.x * accuracy) / accuracy;
+  y = Math.round(evt.accelerationIncludingGravity.y * accuracy) / accuracy;
+  z = Math.round(evt.accelerationIncludingGravity.z * accuracy) / accuracy;
   accel = Math.sqrt(x * x + y * y + z * z);
   // 保存
   field.ax.push(x);
